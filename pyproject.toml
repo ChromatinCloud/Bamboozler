@@ -1,0 +1,44 @@
+[build-system]
+requires = ["setuptools>=42", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "BamBoozler"
+version = "0.2.0"
+description = "A lightweight Python package for reference genome processing, BAM generation, and variant simulation."
+readme = "README.md"
+license = "MIT"
+authors = [
+  { name = "Your Name", email = "your.email@example.com" }
+]
+keywords = ["bioinformatics", "BAM", "genome", "variant", "pyfaidx", "samtools"]
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: OS Independent"
+]
+
+# The dependencies below will be installed by pip if the user runs:
+#   pip install .
+# These are only Python packages. For system-level/bio-specific tools
+# like samtools, the environment.yml file is typically used (see below).
+dependencies = [
+  "requests",      # for HTTP downloads
+  "pyfaidx",       # for indexing/slicing compressed FASTA
+  "biopython",     # if used for annotation or other sequence tasks
+]
+
+[project.optional-dependencies]
+# For external variant tools that can be installed via pip or might not be on PyPI, 
+# add them here if you want them *optionally* installed with something like:
+#   pip install .[tools]
+tools = [
+  # "git+https://github.com/ncsa/NEAT.git", 
+  # "git+https://github.com/bioinform/varsim.git",
+]
+
+[project.scripts]
+# This creates the 'bamboozler' command in the user's PATH
+bamboozler = "BamBoozler.cli:main"
+
+

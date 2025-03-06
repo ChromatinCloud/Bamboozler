@@ -1,19 +1,24 @@
-name: bamboozler-env
+name: bamboozler_env
 channels:
   - conda-forge
   - bioconda
-
 dependencies:
   - python=3.10
   - samtools
   - bwa
   - wgsim
-  - git
-  - curl
-  - openjdk=11
+  - picard
+  - exonerate
+  - velvet
+  - htslib
+  - bcftools
+  - refgenconf
+  - gffutils
+  - pybedtools
+  - vcfpy
+  - bamsurgeon
   - pip
-
   - pip:
       - .
       - git+https://github.com/ncsa/NEAT.git
-      - git+https://github.com/bioinform/varsim.git
+

@@ -1,56 +1,32 @@
-# Dockerfile for BamBoozler
-# Provides a fully-contained environment with Python, 
-# plus NEAT, BAM surgeon, and VarSim (precompiled jar).
+# Use Miniconda as the base image
+FROM continuumio/miniconda3:latest
 
-FROM python:3.10-slim
-
-# Install basic system packages often required by bioinformatics tools
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    curl \
-    git \
-    gcc \
-    make \
-    samtools \
-    bwa \
-    wgsim \
-    openjdk-11-jre-headless \
-    && rm -rf /var/lib/apt/lists/*
-
-# Create a working directory
+# Set working directory
 WORKDIR /app
 
-# Copy BamBoozler source code into the container
-# (Assumes your BamBoozler repo, including pyproject.toml, is in the same folder as this Dockerfile)
+# Copy all your project files into /app (including environment.yml, pyproject.toml, etc.)
 COPY . /app
 
-# Install BamBoozler from pyproject.toml
-RUN pip install --upgrade pip
-RUN pip install .
+# Install mamba in base environment for faster env creation
+RUN conda install -n base -c conda-forge mamba
 
-# ---- [BEGIN] NEAT Installation ----
-RUN git clone https://github.com/ncsa/NEAT.git /tmp/NEAT && \
-    cd /tmp/NEAT && \
-    pip install .
-# ---- [END] NEAT ----
+# Create the conda environment from environment.yml
+RUN mamba env create -f /app/environment.yml
 
-# ---- [BEGIN] VarSim (Precompiled Jar) ----
-# We'll download a jar from a VarSim release. Adjust URL/version as needed.
-# e.g. version 0.8.4 (placeholder). Then put it somewhere on PATH.
-RUN curl -L -o /usr/local/bin/varsim.jar \
-    https://github.com/bioinform/varsim/releases/download/v0.8.4/varsim.jar && \
-    chmod +x /usr/local/bin/varsim.jar
+# Ensure all subsequent commands run inside the bamboozler_env environment
+SHELL ["conda", "run", "-n", "bamboozler_env", "/bin/bash", "-c"]
 
-# Provide a small wrapper script so you can just type 'varsim'
-RUN echo '#!/usr/bin/env bash\nexec java -jar /usr/local/bin/varsim.jar "$@"' > /usr/local/bin/varsim && \
-    chmod +x /usr/local/bin/varsim
-# ---- [END] VarSim ----
+# Install VarSim from GitHub using Maven
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    git \
+    default-jre-headless \
+    maven && \
+    rm -rf /var/lib/apt/lists/*
 
-# Cleanup
-RUN rm -rf /tmp/*
+RUN git clone --recurse-submodules https://github.com/bioinform/varsim.git /opt/varsim && \
+    cd /opt/varsim && \
+    mvn clean package -Dmaven.compiler.source=1.8 -Dmaven.compiler.target=1.8
 
-# Add /usr/local/bin to PATH just in case
-ENV PATH="/usr/local/bin:${PATH}"
-
-# Default command: start a shell inside the container
-CMD ["/bin/bash"]
+# Set the entrypoint for the container to launch a shell by default
+ENTRYPOINT ["/bin/bash"]
 

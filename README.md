@@ -227,7 +227,53 @@ bamboozler variant \
 
 ## In Conclusion
 
-Pick **Docker**, **Conda**, or **pip**. Then run:
+Pick **Docker**, **Conda**, or **pip**. Then run.
+
+
+--- 
+## For Docker, run:
+docker build -t bamboozler . # this builds new docker image named bamboozler.
+docker run -it bamboozler # this runs inside interactive shell
+
+##
+python3 -O /opt/bamsurgeon/scripts/check_dependencies.py # Verify that BamSurgeon is installed
+
+##
+neat-genreads.py --help  # check that NEAT is accesible
+varsim --help # check that varsim is accessible
+
+##
+python3 -O /opt/bamsurgeon/scripts/check_dependencies.py # Verify that BamSurgeon is installed
+
+
+# Check that required system tools are installed
+samtools --version
+bwa
+picard -h
+exonerate -h
+velvetg --help
+
+
+# Check that required system tools are installed
+samtools --version
+bwa
+picard -h
+exonerate -h
+velvetg --help
+
+
+## Run a quick test:
+
+python3 -O /opt/bamsurgeon/bin/addsnv.py \
+    -v test_data/test_snv.txt \
+    -f test_data/testregion_realign.bam \
+    -r test_data/Homo_sapiens_chr22_assembly19.fasta \
+    -o test_data/testregion_snv_mut.bam \
+    --aligner bwa
+
+
+
+
 
 ```
 bamboozler --help

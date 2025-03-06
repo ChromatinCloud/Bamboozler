@@ -13,7 +13,7 @@ if not logger.handlers:
 class VariantSimulator:
     """
     Class for adding or editing variants in an existing BAM file.
-    Supports external tools NEAT and VarSim.
+    Supports external tools NEAT, VarSim, and BamSurgeon.
     """
 
     def __init__(self, 
@@ -62,7 +62,7 @@ class VariantSimulator:
     def run(self, variant_tool: str = None):
         """
         Entry point for adding/editing variants. If variant_tool is None,
-        we use an internal placeholder approach. Otherwise, we invoke NEAT or VarSim.
+        we use an internal placeholder approach. Otherwise, we invoke NEAT, VarSim, or BamSurgeon.
         """
         logger.info("Starting variant addition with tool=%s", variant_tool or "internal")
         logger.info("bam=%s, bai=%s, ref=%s, vcf=%s, out_name=%s",
@@ -72,7 +72,7 @@ class VariantSimulator:
         if variant_tool is None:
             logger.warning("No external tool specified. Using internal variant insertion logic.")
             self._internal_variant_insertion()
-        elif variant_tool.lower() in ["neat", "varsim"]:
+        elif variant_tool.lower() in ["neat", "varsim", "bamsurgeon"]:
             self._run_external_variant_tool(variant_tool.lower())
         else:
             logger.error("Unrecognized variant tool '%s'. Aborting.", variant_tool)
@@ -80,7 +80,6 @@ class VariantSimulator:
     def _internal_variant_insertion(self):
         """
         Placeholder for a pure-Python approach to introducing variants into an existing BAM.
-        In reality, you'd parse the BAM, modify reads, etc.
         """
         out_bam = os.path.join(self.output_dir, f"{self.output_name}.bam")
         logger.info("Using internal variant insertion. Output BAM: %s", out_bam)
@@ -90,13 +89,57 @@ class VariantSimulator:
 
     def _run_external_variant_tool(self, tool: str):
         """
-        Run an external variant editing tool (NEAT or VarSim).
+        Run an external variant editing tool (NEAT, VarSim, or BamSurgeon).
         """
         logger.info("Running external tool: %s with extra_params=%s", tool, self.extra_params)
         if tool == "neat":
             self._run_neat()
         elif tool == "varsim":
             self._run_varsim()
+        elif tool == "bamsurgeon":
+            self._run_bamsurgeon()
+
+    def _run_bamsurgeon(self):
+        """
+        Executes BamSurgeon with conditionally included parameters.
+        """
+        cmd = [
+            "python3", "-O", "/opt/bamsurgeon/bin/addsnv.py",
+            "-v", self.vcf,
+            "-f", self.bam,
+            "-r", self.reference,
+            "-o", os.path.join(self.output_dir, f"{self.output_name}.bam")
+        ]
+
+        # Optional parameters
+        af = self.extra_params.get("allele_freq", self.allele_freq)
+        if af:
+            cmd.extend(["--af", str(af)])
+
+        seed = self.extra_params.get("seed")
+        if seed:
+            cmd.extend(["--seed", str(seed)])
+
+        aligner = self.extra_params.get("aligner", "bwa")
+        cmd.extend(["--aligner", aligner])
+
+        inslib = self.extra_params.get("inslib")
+        if inslib:
+            cmd.extend(["--inslib", inslib])
+
+        keepsecondary = self.extra_params.get("keepsecondary", False)
+        if keepsecondary:
+            cmd.append("--keepsecondary")
+
+        logger.info("Running BamSurgeon command: %s", " ".join(cmd))
+        try:
+            subprocess.run(cmd, check=True)
+        except FileNotFoundError:
+            logger.error("'addsnv.py' from BamSurgeon not found. Check installation.")
+        except subprocess.CalledProcessError as e:
+            logger.error("BamSurgeon command failed: %s", e)
+        else:
+            logger.info("BamSurgeon variant insertion complete.")
 
     def _run_neat(self):
         """
@@ -158,22 +201,6 @@ class VariantSimulator:
         if coverage:
             cmd.extend(["--coverage", str(coverage)])
 
-        read_len = self.extra_params.get("read_length")
-        if read_len:
-            cmd.extend(["--read_len", str(read_len)])
-
-        random_seed = self.extra_params.get("seed")
-        if random_seed:
-            cmd.extend(["--seed", str(random_seed)])
-
-        max_sv_size = self.extra_params.get("max_sv_size")
-        if max_sv_size:
-            cmd.extend(["--max_sv_size", str(max_sv_size)])
-
-        simulator = self.extra_params.get("simulator")
-        if simulator:
-            cmd.extend(["--simulator_executable", simulator])
-
         logger.info("Running VarSim command: %s", " ".join(cmd))
         try:
             subprocess.run(cmd, check=True)
@@ -183,19 +210,4 @@ class VariantSimulator:
             logger.error("VarSim command failed: %s", e)
         else:
             logger.info("VarSim simulation complete.")
-
-if __name__ == "__main__":
-    # Example usage
-    vsim = VariantSimulator(
-        bam="input.bam",
-        bai="input.bai",
-        reference="reference.fasta",
-        vcf="variants.vcf",
-        output_dir="variant_output",
-        output_name="modified_sample",
-        allele_freq=0.5,
-        read_mix=0.5,
-        tool_param_file="variant_params.yaml"
-    )
-    vsim.run(variant_tool="neat")
 

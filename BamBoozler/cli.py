@@ -70,7 +70,7 @@ def main():
     variant_parser.add_argument("--allele-frequency", type=float, default=0.5)
     variant_parser.add_argument("--read-mix", type=float, default=0.5)
     variant_parser.add_argument("--variant-tool", default=None,
-                                help="Specify which external tool to use (bamcake, neat, varsim) or leave empty for internal logic.")
+                            help="Specify which external tool to use (neat, varsim, bamsurgeon) or leave empty for internal logic.")
     variant_parser.add_argument("--tool-param-file", default=None,
                                 help="Path to a YAML file containing tool-specific parameters.")
 
